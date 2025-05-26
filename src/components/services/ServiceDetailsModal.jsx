@@ -3,13 +3,14 @@ import { Link } from 'react-router-dom';
 import { FaStar, FaTimes, FaClock, FaMapMarkerAlt, FaTag, FaCheck, FaUserAlt } from 'react-icons/fa';
 import LazyImage from '../common/LazyImage';
 import LazyVideo from '../common/LazyVideo';
-import apiService from '../../services/api';
+import { useService } from '../../context/ServiceContext';
 import serviceRelax from '../../assets/images/service-relax.jpg';
 
 const ServiceDetailsModal = ({ serviceId, onClose }) => {
   const [service, setService] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { getAllServices } = useService();
 
   useEffect(() => {
     const fetchServiceDetails = async () => {
@@ -17,13 +18,25 @@ const ServiceDetailsModal = ({ serviceId, onClose }) => {
       setError(null);
 
       try {
-        console.log('Generating mock data for service ID:', serviceId);
-        // Always generate mock data for now
-        const mockData = generateMockServiceDetails(serviceId);
-        console.log('Generated mock data:', mockData);
-        setService(mockData);
+        console.log('Fetching service details for ID:', serviceId);
+
+        // First try to find the service in our dynamic services
+        const allServices = getAllServices();
+        const foundService = allServices.find(s => s.id === serviceId);
+
+        if (foundService) {
+          console.log('Found dynamic service:', foundService);
+          // Enhance the service with additional details if needed
+          const enhancedService = enhanceServiceDetails(foundService);
+          setService(enhancedService);
+        } else {
+          // Fallback to mock data for static services
+          console.log('Service not found in dynamic services, generating mock data');
+          const mockData = generateMockServiceDetails(serviceId);
+          setService(mockData);
+        }
       } catch (err) {
-        console.error('Error generating mock service details:', err);
+        console.error('Error fetching service details:', err);
         setError('Failed to load service details. Please try again.');
       } finally {
         setLoading(false);
@@ -31,7 +44,106 @@ const ServiceDetailsModal = ({ serviceId, onClose }) => {
     };
 
     fetchServiceDetails();
-  }, [serviceId]);
+  }, [serviceId, getAllServices]);
+
+  // Function to enhance dynamic service with additional details
+  const enhanceServiceDetails = (service) => {
+    // If the service already has all required fields, return as is
+    if (service.description && service.duration && service.professionals &&
+        service.includes && service.excludes) {
+      return {
+        ...service,
+        location: 'At your home',
+        availability: generateAvailability()
+      };
+    }
+
+    // Otherwise, enhance with default values based on category
+    const isCleaningService = service.category === 'Cleaning' ||
+                             service.title.toLowerCase().includes('cleaning');
+    const isSalonService = service.category === 'Beauty & Wellness' ||
+                          service.title.toLowerCase().includes('salon') ||
+                          service.title.toLowerCase().includes('spa') ||
+                          service.title.toLowerCase().includes('beauty');
+    const isHealthcareService = service.category === 'Healthcare' ||
+                               service.title.toLowerCase().includes('healthcare');
+
+    let defaults = {};
+
+    if (isCleaningService) {
+      defaults = {
+        duration: service.duration || '2-3 hours',
+        professionals: service.professionals || ['Professional Cleaners', 'Equipment Specialists'],
+        includes: service.includes || [
+          'Deep cleaning of all rooms',
+          'Dusting and vacuuming',
+          'Bathroom sanitization',
+          'Kitchen cleaning',
+          'Floor mopping'
+        ],
+        excludes: service.excludes || [
+          'Window exterior cleaning',
+          'Furniture moving',
+          'Wall washing',
+          'Ceiling cleaning'
+        ]
+      };
+    } else if (isSalonService) {
+      defaults = {
+        duration: service.duration || '1-2 hours',
+        professionals: service.professionals || ['Licensed Beauticians', 'Spa Therapists'],
+        includes: service.includes || [
+          'Consultation before service',
+          'Premium products',
+          'Relaxing environment',
+          'Post-service care tips'
+        ],
+        excludes: service.excludes || [
+          'Products to take home',
+          'Medical treatments',
+          'Permanent makeup'
+        ]
+      };
+    } else if (isHealthcareService) {
+      defaults = {
+        duration: service.duration || '30-60 minutes',
+        professionals: service.professionals || ['Licensed Healthcare Professionals', 'Certified Nurses'],
+        includes: service.includes || [
+          'Initial health assessment',
+          'Vital signs monitoring',
+          'Basic health check',
+          'Health recommendations'
+        ],
+        excludes: service.excludes || [
+          'Prescription medications',
+          'Invasive procedures',
+          'Long-term treatment plans'
+        ]
+      };
+    } else {
+      defaults = {
+        duration: service.duration || '1-2 hours',
+        professionals: service.professionals || ['Certified Professionals'],
+        includes: service.includes || [
+          'Professional service',
+          'Quality assurance',
+          'Customer satisfaction guarantee'
+        ],
+        excludes: service.excludes || [
+          'Additional services not specified',
+          'Products not included in package'
+        ]
+      };
+    }
+
+    return {
+      ...service,
+      description: service.description || `Experience the best ${service.title} service at your doorstep. Our professional team ensures high-quality service tailored to your specific needs.`,
+      location: 'At your home',
+      ...defaults,
+      availability: generateAvailability()
+    };
+  };
 
   // Function to generate mock service details based on serviceId
   const generateMockServiceDetails = (id) => {

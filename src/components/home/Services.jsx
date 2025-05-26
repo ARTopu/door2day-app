@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import LazyImage from '../common/LazyImage';
-import apiService from '../../services/api';
+import { useService } from '../../context/ServiceContext';
 
-// Import images
+// Import images for fallback
 import serviceCleaning from '../../assets/images/service-cleaning.jpg';
 import serviceSalon from '../../assets/images/service-salon.jpg';
 import serviceHealthcare from '../../assets/images/service-healthcare.jpg';
@@ -29,26 +28,12 @@ const ServiceCard = ({ title, image, link }) => {
 };
 
 const Services = () => {
-  const [services, setServices] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { getServicesByDisplayCategory, loading } = useService();
 
-  useEffect(() => {
-    const fetchServices = async () => {
-      try {
-        // In a real app, this would be an API call
-        const data = await apiService.services.getAll();
-        setServices(data);
-      } catch (error) {
-        console.error('Error fetching services:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Get services for the General section
+  const generalServices = getServicesByDisplayCategory('General');
 
-    fetchServices();
-  }, []);
-
-  // Fallback data in case API fails
+  // Fallback data in case no services are available
   const fallbackServices = [
     {
       id: 1,
@@ -76,8 +61,8 @@ const Services = () => {
     }
   ];
 
-  // Use fallback data if API fails or is empty
-  const displayServices = services.length > 0 ? services : fallbackServices;
+  // Use dynamic services if available, otherwise use fallback
+  const displayServices = generalServices.length > 0 ? generalServices.slice(0, 4) : fallbackServices;
 
   return (
     <div className="py-12 bg-gray-50">

@@ -1,10 +1,8 @@
-import { useState, useEffect } from 'react';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import LazyImage from '../components/common/LazyImage';
 import LazyVideo from '../components/common/LazyVideo';
 import { FaStar } from 'react-icons/fa';
-import apiService from '../services/api';
 import { useService } from '../context/ServiceContext';
 import serviceRelax from '../assets/images/service-relax.jpg';
 import serviceNails from '../assets/images/service-nails.jpg';
@@ -76,162 +74,57 @@ const ServiceCard = ({ id, title, image, mediaType, rating, reviews, originalPri
 };
 
 const AllServicesPage = () => {
-  const [services, setServices] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { getAllServices, loading } = useService();
 
-  useEffect(() => {
-    const fetchAllServices = async () => {
-      setLoading(true);
-      try {
-        // In a real app, we would fetch all services from the API
-        // For now, we'll combine the services from different categories
-        // Exclude basic services (Top Service section)
-        const topPicks = await apiService.services.getTopPicks();
-        const trending = await apiService.services.getTrending();
-        const newServices = await apiService.services.getNew();
+  // Get all services from the context
+  const allServices = getAllServices();
 
-        // Combine all services and remove duplicates based on id
-        const allServices = [...topPicks, ...trending, ...newServices];
-        const uniqueServices = Array.from(new Map(allServices.map(item => [item.id, item])).values());
+  // Fallback data in case no services are available
+  const fallbackServices = [
+    {
+      id: 101,
+      title: 'Relax and Rejuvenate: Salon & Spa',
+      image: serviceRelax,
+      rating: 4.8,
+      reviews: 76,
+      originalPrice: 120,
+      discountedPrice: 99,
+      link: '/services/relax-spa'
+    },
+    {
+      id: 102,
+      title: 'Flawless Nails, Right Fingertips',
+      image: serviceNails,
+      rating: 4.7,
+      reviews: 58,
+      originalPrice: 80,
+      discountedPrice: 65,
+      link: '/services/nails'
+    },
+    {
+      id: 103,
+      title: 'Pamper Yourself: Salon & Spa',
+      image: servicePamper,
+      rating: 4.9,
+      reviews: 84,
+      originalPrice: 150,
+      discountedPrice: 120,
+      link: '/services/pamper-spa'
+    },
+    {
+      id: 104,
+      title: 'Revive at Home: Expert Salon',
+      image: serviceRevive,
+      rating: 4.8,
+      reviews: 92,
+      originalPrice: 130,
+      discountedPrice: 110,
+      link: '/services/revive-salon'
+    }
+  ];
 
-        setServices(uniqueServices);
-      } catch (error) {
-        console.error('Error fetching services:', error);
-        // Use fallback data if API fails
-        setServices(getFallbackServices());
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAllServices();
-  }, []);
-
-  // Fallback data in case API fails
-  const getFallbackServices = () => {
-    return [
-      {
-        id: 101,
-        title: 'Relax and Rejuvenate: Salon & Spa',
-        image: serviceRelax,
-        rating: 4.8,
-        reviews: 76,
-        originalPrice: 120,
-        discountedPrice: 99,
-        link: '/services/relax-spa'
-      },
-      {
-        id: 102,
-        title: 'Flawless Nails, Right Fingertips',
-        image: serviceNails,
-        rating: 4.7,
-        reviews: 58,
-        originalPrice: 80,
-        discountedPrice: 65,
-        link: '/services/nails'
-      },
-      {
-        id: 103,
-        title: 'Pamper Yourself: Salon & Spa',
-        image: servicePamper,
-        rating: 4.9,
-        reviews: 84,
-        originalPrice: 150,
-        discountedPrice: 120,
-        link: '/services/pamper-spa'
-      },
-      {
-        id: 104,
-        title: 'Revive at Home: Expert Salon',
-        image: serviceRevive,
-        rating: 4.8,
-        reviews: 92,
-        originalPrice: 130,
-        discountedPrice: 110,
-        link: '/services/revive-salon'
-      },
-      {
-        id: 201,
-        title: 'Tranquility Delivered: Salon & Spa',
-        image: trendingSpa,
-        rating: 4.8,
-        reviews: 76,
-        originalPrice: 120,
-        discountedPrice: 99,
-        link: '/services/tranquility-spa'
-      },
-      {
-        id: 202,
-        title: 'Home Cleaning for AC Cleaning',
-        image: trendingCleaning,
-        rating: 4.7,
-        reviews: 58,
-        originalPrice: 80,
-        discountedPrice: 65,
-        link: '/services/home-cleaning'
-      },
-      {
-        id: 203,
-        title: 'Home Cleaning for AC Cleaning',
-        image: trendingAC,
-        rating: 4.9,
-        reviews: 84,
-        originalPrice: 150,
-        discountedPrice: 120,
-        link: '/services/ac-cleaning'
-      },
-      {
-        id: 204,
-        title: 'Clean From Home: Professional',
-        image: trendingPro,
-        rating: 4.8,
-        reviews: 92,
-        originalPrice: 130,
-        discountedPrice: 110,
-        link: '/services/pro-cleaning'
-      },
-      {
-        id: 301,
-        title: 'Home Salon & Spa Services',
-        image: newSalon,
-        rating: 4.8,
-        reviews: 76,
-        originalPrice: 120,
-        discountedPrice: 99,
-        link: '/services/home-salon'
-      },
-      {
-        id: 302,
-        title: 'Feel Beautiful, Stay Home! Salon',
-        image: newBeauty,
-        rating: 4.7,
-        reviews: 58,
-        originalPrice: 80,
-        discountedPrice: 65,
-        link: '/services/beauty-salon'
-      },
-      {
-        id: 303,
-        title: 'Beauty Haven: Salon & Spa',
-        image: newHaven,
-        rating: 4.9,
-        reviews: 84,
-        originalPrice: 150,
-        discountedPrice: 120,
-        link: '/services/beauty-haven'
-      },
-      {
-        id: 304,
-        title: 'Refreshed: Home Salon & Spa',
-        image: newRefreshed,
-        rating: 4.8,
-        reviews: 92,
-        originalPrice: 130,
-        discountedPrice: 110,
-        link: '/services/refreshed-salon'
-      }
-    ];
-  };
+  // Use dynamic services if available, otherwise use fallback
+  const displayServices = allServices.length > 0 ? allServices : fallbackServices;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -255,12 +148,13 @@ const AllServicesPage = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {services.map((service) => (
+              {displayServices.map((service) => (
                 <ServiceCard
                   key={service.id}
                   id={service.id}
                   title={service.title}
                   image={service.image}
+                  mediaType={service.mediaType}
                   rating={service.rating}
                   reviews={service.reviews}
                   originalPrice={service.originalPrice}

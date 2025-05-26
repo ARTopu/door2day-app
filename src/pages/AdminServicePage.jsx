@@ -4,14 +4,13 @@ import { FaPlus, FaEdit, FaTrash, FaSave, FaTimes, FaImage, FaVideo } from 'reac
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import { useAuth } from '../context/AuthContext';
-import apiService from '../services/api';
+import { useService } from '../context/ServiceContext';
 import LazyVideo from '../components/common/LazyVideo';
 
 const AdminServicePage = () => {
   const { user, isAuthenticated } = useAuth();
+  const { services, loading, addService, updateService, deleteService } = useService();
   const navigate = useNavigate();
-  const [services, setServices] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     title: '',
     category: '',
@@ -23,7 +22,8 @@ const AdminServicePage = () => {
     includes: '',
     excludes: '',
     image: null,
-    mediaType: null
+    mediaType: null,
+    displayCategory: ''
   });
   const [mediaPreview, setMediaPreview] = useState(null);
   const [mediaType, setMediaType] = useState(null);
@@ -38,32 +38,7 @@ const AdminServicePage = () => {
     }
   }, [isAuthenticated, user, navigate]);
 
-  // Fetch all services
-  useEffect(() => {
-    const fetchAllServices = async () => {
-      setLoading(true);
-      try {
-        // In a real app, we would fetch all services from the API
-        const basicServices = await apiService.services.getAll();
-        const topPicks = await apiService.services.getTopPicks();
-        const trending = await apiService.services.getTrending();
-        const newServices = await apiService.services.getNew();
-
-        // Combine all services and remove duplicates based on id
-        const allServices = [...basicServices, ...topPicks, ...trending, ...newServices];
-        const uniqueServices = Array.from(new Map(allServices.map(item => [item.id, item])).values());
-
-        setServices(uniqueServices);
-      } catch (error) {
-        console.error('Error fetching services:', error);
-        setError('Failed to load services. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAllServices();
-  }, []);
+  // Services are now managed by ServiceContext, no need to fetch them here
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -109,33 +84,32 @@ const AdminServicePage = () => {
     }
 
     try {
-      // In a real app, this would be an API call to create/update a service
-      const newService = {
-        id: editingId || Date.now(), // Use existing ID or generate a new one
+      const serviceData = {
         title: formData.title,
         category: formData.category,
         description: formData.description,
         duration: formData.duration,
         originalPrice: parseFloat(formData.originalPrice),
         discountedPrice: parseFloat(formData.discountedPrice),
-        professionals: formData.professionals.split(',').map(item => item.trim()),
-        includes: formData.includes.split(',').map(item => item.trim()),
-        excludes: formData.excludes.split(',').map(item => item.trim()),
+        professionals: formData.professionals.split(',').map(item => item.trim()).filter(item => item),
+        includes: formData.includes.split(',').map(item => item.trim()).filter(item => item),
+        excludes: formData.excludes.split(',').map(item => item.trim()).filter(item => item),
         image: mediaPreview || 'https://via.placeholder.com/300x200?text=Service+Image',
         mediaType: mediaType || 'image',
-        rating: 5.0,
-        reviews: 0
+        displayCategory: formData.displayCategory || 'General',
+        rating: 4.5 + Math.random() * 0.5, // Random rating between 4.5-5.0
+        reviews: Math.floor(Math.random() * 100) + 10, // Random reviews between 10-110
+        link: `/services/${formData.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`
       };
 
       if (editingId) {
         // Update existing service
-        setServices(services.map(service =>
-          service.id === editingId ? newService : service
-        ));
+        const updatedService = { ...serviceData, id: editingId };
+        await updateService(updatedService);
         setSuccess('Service updated successfully!');
       } else {
         // Add new service
-        setServices([...services, newService]);
+        await addService(serviceData);
         setSuccess('Service created successfully!');
       }
 
@@ -160,18 +134,22 @@ const AdminServicePage = () => {
       includes: Array.isArray(service.includes) ? service.includes.join(', ') : '',
       excludes: Array.isArray(service.excludes) ? service.excludes.join(', ') : '',
       image: null,
-      mediaType: service.mediaType || 'image'
+      mediaType: service.mediaType || 'image',
+      displayCategory: service.displayCategory || ''
     });
     setMediaPreview(typeof service.image === 'string' ? service.image : null);
     setMediaType(service.mediaType || 'image');
     window.scrollTo(0, 0);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this service?')) {
-      // In a real app, this would be an API call to delete a service
-      setServices(services.filter(service => service.id !== id));
-      setSuccess('Service deleted successfully!');
+      try {
+        await deleteService(id);
+        setSuccess('Service deleted successfully!');
+      } catch (error) {
+        setError('Failed to delete service. Please try again.');
+      }
     }
   };
 
@@ -187,7 +165,8 @@ const AdminServicePage = () => {
       includes: '',
       excludes: '',
       image: null,
-      mediaType: null
+      mediaType: null,
+      displayCategory: ''
     });
     setMediaPreview(null);
     setMediaType(null);
@@ -247,6 +226,24 @@ const AdminServicePage = () => {
                     <option value="Home Maintenance">Home Maintenance</option>
                     <option value="General Services">General Services</option>
                   </select>
+                </div>
+
+                <div className="mb-4">
+                  <label htmlFor="displayCategory" className="block text-gray-700 mb-1">Display Section</label>
+                  <select
+                    id="displayCategory"
+                    name="displayCategory"
+                    value={formData.displayCategory}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
+                  >
+                    <option value="">Select display section</option>
+                    <option value="General">General Services</option>
+                    <option value="Top Picks">Top Picks</option>
+                    <option value="Trending">Trending</option>
+                    <option value="New">New Services</option>
+                  </select>
+                  <p className="text-sm text-gray-500 mt-1">Choose where this service will appear on the homepage</p>
                 </div>
 
                 <div className="mb-4">
@@ -418,6 +415,7 @@ const AdminServicePage = () => {
                   <th className="py-3 px-4 text-left">ID</th>
                   <th className="py-3 px-4 text-left">Title</th>
                   <th className="py-3 px-4 text-left">Category</th>
+                  <th className="py-3 px-4 text-left">Display Section</th>
                   <th className="py-3 px-4 text-left">Price</th>
                   <th className="py-3 px-4 text-left">Actions</th>
                 </tr>
@@ -428,6 +426,16 @@ const AdminServicePage = () => {
                     <td className="py-3 px-4">{service.id}</td>
                     <td className="py-3 px-4">{service.title}</td>
                     <td className="py-3 px-4">{service.category || 'N/A'}</td>
+                    <td className="py-3 px-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        service.displayCategory === 'Top Picks' ? 'bg-yellow-100 text-yellow-800' :
+                        service.displayCategory === 'Trending' ? 'bg-red-100 text-red-800' :
+                        service.displayCategory === 'New' ? 'bg-green-100 text-green-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {service.displayCategory || 'General'}
+                      </span>
+                    </td>
                     <td className="py-3 px-4">
                       <span className="line-through text-gray-500 mr-2">${service.originalPrice}</span>
                       <span className="text-primary font-semibold">${service.discountedPrice}</span>

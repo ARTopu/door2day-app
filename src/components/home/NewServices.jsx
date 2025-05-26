@@ -1,7 +1,5 @@
-import { useState, useEffect } from 'react';
 import { FaStar } from 'react-icons/fa';
 import LazyImage from '../common/LazyImage';
-import apiService from '../../services/api';
 import { useService } from '../../context/ServiceContext';
 
 // Import images
@@ -52,26 +50,12 @@ const ServiceCard = ({ id, title, image, rating, reviews, originalPrice, discoun
 };
 
 const NewServices = () => {
-  const [services, setServices] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { getServicesByDisplayCategory, loading } = useService();
 
-  useEffect(() => {
-    const fetchNewServices = async () => {
-      try {
-        // In a real app, this would be an API call
-        const data = await apiService.services.getNew();
-        setServices(data);
-      } catch (error) {
-        console.error('Error fetching new services:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Get services for the New section
+  const newServices = getServicesByDisplayCategory('New');
 
-    fetchNewServices();
-  }, []);
-
-  // Fallback data in case API fails
+  // Fallback data in case no services are available
   const fallbackServices = [
     {
       id: 1,
@@ -115,8 +99,8 @@ const NewServices = () => {
     }
   ];
 
-  // Use fallback data if API fails or is empty
-  const displayServices = services.length > 0 ? services : fallbackServices;
+  // Use dynamic services if available, otherwise use fallback
+  const displayServices = newServices.length > 0 ? newServices.slice(0, 4) : fallbackServices;
 
   return (
     <div className="py-12 bg-white">
